@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Build wis2box-minio Docker image
+      - name: Build wis2box-minio:test Docker image
         run: |
           docker build -t wis2box-minio:test -f Dockerfile.local --build-arg RELEASE=local-build-test .
       - name: Run Trivy vulnerability scanner on wis2box-minio image
