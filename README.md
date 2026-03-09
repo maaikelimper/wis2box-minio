@@ -28,4 +28,8 @@ You can access the dev container with:
 docker compose exec go-dev sh 
 ```
 
+You can use the following command to run go mod tidy in the dev container to update the go.mod and go.sum files after making changes to the code:
 
+```
+docker compose exec go-dev go mod tidy
+```
