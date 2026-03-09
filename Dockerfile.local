@@ -14,7 +14,7 @@ RUN apk add -U --no-cache ca-certificates git
 COPY . /src
 
 # Build minio binary
-RUN go mod tidy && go build -o /go/bin/minio ./
+RUN go build -o /go/bin/minio ./
 
 # Optionally build mc if source is present (remove if not needed)
 # RUN git clone https://github.com/minio/mc.git /src-mc && cd /src-mc && go build -o /go/bin/mc ./
