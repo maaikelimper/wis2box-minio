@@ -261,4 +261,4 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 )
 
-replace github.com/minio/console => github.com/maaikelimper/wis2box-minio-console main
+replace github.com/minio/console => github.com/maaikelimper/wis2box-minio-console v0.0.0-20260309130652-c3118db51933
