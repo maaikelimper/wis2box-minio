@@ -155,6 +155,7 @@ var ServerFlags = []cli.Flag{
 		Usage:  "set global memory limit per server via GOMEMLIMIT",
 		Hidden: true,
 		EnvVar: "MINIO_MEMLIMIT",
+		Value: "384MiB",
 	},
 	cli.IntFlag{
 		Name:   "send-buf-size",

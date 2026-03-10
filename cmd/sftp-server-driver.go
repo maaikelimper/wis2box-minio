@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -45,6 +46,7 @@ const ftpMaxWriteOffset = 100 << 20
 type sftpDriver struct {
 	permissions *ssh.Permissions
 	endpoint    string
+	remoteIP    string
 }
 
 //msgp:ignore sftpMetrics
@@ -79,7 +81,9 @@ func (m *sftpMetrics) log(s *sftp.Request, user string) func(sz int64, err error
 	startTime := time.Now()
 	source := getSource(2)
 	return func(sz int64, err error) {
-		globalTrace.Publish(sftpTrace(s, startTime, source, user, err, sz))
+		trace := sftpTrace(s, startTime, source, user, err, sz)
+		//fmt.Printf("[SFTP-TRACE] %+v\n", trace)
+		globalTrace.Publish(trace)
 	}
 }
 
@@ -89,8 +93,12 @@ func (m *sftpMetrics) log(s *sftp.Request, user string) func(sz int64, err error
 // - sftp.Filewrite
 // - sftp.Filelist
 // - sftp.Filecmd
-func NewSFTPDriver(perms *ssh.Permissions) sftp.Handlers {
-	handler := &sftpDriver{endpoint: fmt.Sprintf("127.0.0.1:%s", globalMinioPort), permissions: perms}
+func NewSFTPDriver(perms *ssh.Permissions, remoteIP string) sftp.Handlers {
+	handler := &sftpDriver{
+		endpoint:    fmt.Sprintf("127.0.0.1:%s", globalMinioPort),
+		permissions: perms,
+		remoteIP:    remoteIP,
+	}
 	return sftp.Handlers{
 		FileGet:  handler,
 		FilePut:  handler,
@@ -99,16 +107,31 @@ func NewSFTPDriver(perms *ssh.Permissions) sftp.Handlers {
 	}
 }
 
+type forwardForTransport struct {
+	tr  http.RoundTripper
+	fwd string
+}
+
+func (f forwardForTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r.Header.Set("X-Forwarded-For", f.fwd)
+	return f.tr.RoundTrip(r)
+}
+
 func (f *sftpDriver) getMinIOClient() (*minio.Client, error) {
 	mcreds := credentials.NewStaticV4(
 		f.permissions.CriticalOptions["AccessKey"],
 		f.permissions.CriticalOptions["SecretKey"],
 		f.permissions.CriticalOptions["SessionToken"],
 	)
+	// Set X-Forwarded-For on all requests.
+	tr := http.RoundTripper(globalRemoteFTPClientTransport)
+	if f.remoteIP != "" {
+		tr = forwardForTransport{tr: tr, fwd: f.remoteIP}
+	}
 	return minio.New(f.endpoint, &minio.Options{
 		Creds:     mcreds,
 		Secure:    globalIsTLS,
-		Transport: globalRemoteFTPClientTransport,
+		Transport: tr,
 	})
 }
 
@@ -117,6 +140,10 @@ func (f *sftpDriver) AccessKey() string {
 }
 
 func (f *sftpDriver) Fileread(r *sftp.Request) (ra io.ReaderAt, err error) {
+	if err != nil {
+		fmt.Printf("[SFTP-ERROR] Fileread error: %v\n", err)
+	}
+	//fmt.Printf("[SFTP] Fileread: %s (flags: %v)\n", r.Filepath, r.Pflags())
 	// This is not timing the actual read operation, but the time it takes to prepare the reader.
 	stopFn := globalSftpMetrics.log(r, f.AccessKey())
 	defer stopFn(0, err)
@@ -224,6 +251,10 @@ again:
 }
 
 func (f *sftpDriver) Filewrite(r *sftp.Request) (w io.WriterAt, err error) {
+	if err != nil {
+		fmt.Printf("[SFTP-ERROR] Filewrite error: %v\n", err)
+	}
+	//fmt.Printf("[SFTP] Filewrite: %s (flags: %v)\n", r.Filepath, r.Pflags())
 	stopFn := globalSftpMetrics.log(r, f.AccessKey())
 	defer func() {
 		if err != nil {
@@ -277,6 +308,10 @@ func (f *sftpDriver) Filewrite(r *sftp.Request) (w io.WriterAt, err error) {
 }
 
 func (f *sftpDriver) Filecmd(r *sftp.Request) (err error) {
+	if err != nil {
+		fmt.Printf("[SFTP-ERROR] Filecmd error: %v\n", err)
+	}
+	//fmt.Printf("[SFTP] Filecmd: %s (method: %s)\n", r.Filepath, r.Method)
 	stopFn := globalSftpMetrics.log(r, f.AccessKey())
 	defer stopFn(0, err)
 
@@ -373,6 +408,14 @@ func (f listerAt) ListAt(ls []os.FileInfo, offset int64) (int, error) {
 }
 
 func (f *sftpDriver) Filelist(r *sftp.Request) (la sftp.ListerAt, err error) {
+	if err != nil {
+		fmt.Printf("[SFTP-ERROR] Filelist error: %v\n", err)
+	}
+	if err != nil {
+		fmt.Printf("[SFTP-ERROR] writerAt.Close error: %v\n", err)
+	}
+	//fmt.Printf("[SFTP] Filelist: %s (method: %s)\n", r.Filepath, r.Method)
+	//fmt.Printf("[SFTP] writerAt.Close called\n")
 	stopFn := globalSftpMetrics.log(r, f.AccessKey())
 	defer stopFn(0, err)
 
