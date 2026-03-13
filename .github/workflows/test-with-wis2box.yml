@@ -1,0 +1,72 @@
+name: test-with-wis2box
+
+on: [ push, pull_request ]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: setup Python
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        working-directory: wis2box_test
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install -r requirements.txt
+
+      - name: Build wis2box-minio:test Docker image
+        run: |
+          docker compose exec go-dev go mod tidy
+          docker build -t wis2box-minio:test -f Dockerfile.local --build-arg RELEASE=local-build-test .
+
+      - name: Docker Compose up -d
+        working-directory: wis2box_test
+        run:
+          docker compose up -d
+
+      - name: Wait for service to be ready
+        run: sleep 30
+
+      - name: publish datasets
+        working-directory: wis2box_test
+        run: |
+          docker exec -t minio-test-wis2box-management wis2box dataset publish /data/wis2box/metadata/discovery/universal-test.yml
+      - name: Check status MinIO Console
+        working-directory: wis2box_test
+        run: |
+          status_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4100/oapi)
+          if [[ $status_code -ne 200 ]]; then
+            echo "Request failed with status code $status_code"
+            exit 1
+          fi
+      - name: Check status code wis2box-public bucket is 200
+        working-directory: wis2box_test
+        run: |
+          status_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/wis2box-public/)
+          if [[ $status_code -ne 200 ]]; then
+            echo "Request failed with status code $status_code"
+            exit 1
+          fi
+      - name: Check status code wis2box-incoming bucket is 403
+        working-directory: wis2box_test
+        run: |
+          status_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/wis2box-incoming/)
+          if [[ $status_code -ne 403 ]]; then
+            echo "Request failed with status code $status_code"
+            exit 1
+          fi
+      - name: run integration tests ⚙️
+        working-directory: wis2box_test
+        run: |
+          pytest -s tests/integration
+
+      - name: failed tests 🚩
+        working-directory: wis2box_test
+        if: ${{ failure() }}
+        run: |
+          docker compose logs

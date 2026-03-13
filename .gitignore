@@ -53,3 +53,6 @@ s3-check-md5
 s3-verify
 xattr
 xl-meta
+wis2box_test/tests/integration/__pycache__
+wis2box_test/tests/data/.htpasswd
+wis2box_test/tests/data/.ssh

@@ -421,8 +421,8 @@ github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69
 github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/lufia/plan9stats v0.0.0-20250317134145-8bc96cf8fc35 h1:PpXWgLPs+Fqr325bN2FD2ISlRRztXibcX6e8f5FR5Dc=
 github.com/lufia/plan9stats v0.0.0-20250317134145-8bc96cf8fc35/go.mod h1:autxFIvghDt3jPTLoqZ9OZ7s9qTGNAWmYCjVFWPX/zg=
-github.com/maaikelimper/wis2box-minio-console v0.0.0-20260309130652-c3118db51933 h1:as0mEom5AkWYj2yI3PfGn0AodGFfM1c8Pb7ywAH7wVw=
-github.com/maaikelimper/wis2box-minio-console v0.0.0-20260309130652-c3118db51933/go.mod h1:yFhhM3Y3uT4N1WtphcYr3QAd7WYLU8CEuTcIiDpksWs=
+github.com/maaikelimper/wis2box-minio-console v0.0.0-20260312124136-8136fab5c3be h1:lR8/69uD3exxaAxoHblsLQ/SAfJmZTN+z8xI5h0jEnk=
+github.com/maaikelimper/wis2box-minio-console v0.0.0-20260312124136-8136fab5c3be/go.mod h1:yFhhM3Y3uT4N1WtphcYr3QAd7WYLU8CEuTcIiDpksWs=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
