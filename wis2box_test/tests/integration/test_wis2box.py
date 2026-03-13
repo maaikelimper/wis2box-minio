@@ -31,18 +31,20 @@ import requests
 
 MINIO_SERVER_URL = 'http://localhost:4000'
 WIS2BOX_API_URL = 'http://localhost:4100/oapi'
+METADATA_ID = 'urn:wmo:md:universal-test:test'
+
 
 def test_wis2box_data_ingest():
 
     # this uses the wis2box data ingest command to ingest some data
     filepath = '/data/wis2box/observations/wis2box-data-ingest_20260203.txt'
-    os_command = f'docker exec minio-test-wis2box-management wis2box data ingest -p {filepath}'
+    os_command = f'docker exec minio-test-wis2box-management wis2box data ingest -p {filepath} -mdi {METADATA_ID}'
     os.system(os_command)
     # wait a bit for the data to be ingested
     time.sleep(0.5)
 
     # check if the data has been published
-    test_url = f'{MINIO_SERVER_URL}/wis2box-public/2026-02-03/wis/urn:wmo:md:universal-test:test/wis2box-data-ingest_20260203.txt'
+    test_url = f'{MINIO_SERVER_URL}/wis2box-public/2026-02-03/{METADATA_ID}/wis2box-data-ingest_20260203.txt'
     response = requests.get(test_url)
     assert response.status_code == 200
     assert response.text == 'This is just some random data that will be uploaded using the wis2box data ingest command.'
@@ -51,7 +53,7 @@ def test_wis2box_sftp_upload():
 
     # this uses the minio client for python to upload some data to the SFTP server
     filepath = '../data/observations/minio-SFTP_20260203.txt'
-    transport = paramiko.Transport(('localhost', 8022))
+    transport = paramiko.Transport(('localhost', 4022))
     transport.connect(username='minio', password='minio123')
     sftp = paramiko.SFTPClient.from_transport(transport)
     sftp.put(filepath, '/home/minio/observations/minio-SFTP_20260203.txt')
@@ -61,7 +63,7 @@ def test_wis2box_sftp_upload():
     time.sleep(0.5)
 
     # check if the data has been published
-    test_url = f'{MINIO_SERVER_URL}/wis2box-public/2026-02-03/urn:wmo:md:universal-test:test/minio-SFTP_20260203.txt'
+    test_url = f'{MINIO_SERVER_URL}/wis2box-public/2026-02-03/{METADATA_ID}/minio-SFTP_20260203.txt'
     response = requests.get(test_url)
     assert response.status_code == 200
     assert response.text == 'This is just some random data that will be uploaded over SFTP as part of the integration tests for the wis2box-minio project.'
