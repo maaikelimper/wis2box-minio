@@ -13,6 +13,13 @@ jobs:
         with:
           python-version: 3.8
 
+      - name: prepare ssh-keys for MinIO sftp 🔧
+        working-directory: wis2box_test
+        run: |
+          mkdir -p tests/data/.ssh
+          ssh-keygen -t rsa -b 4096 -f tests/data/.ssh/id_rsa -N "" -q
+          ls -lh tests/data/.ssh/
+
       - name: Install dependencies
         working-directory: wis2box_test
         run: |
@@ -21,7 +28,6 @@ jobs:
 
       - name: Build wis2box-minio:test Docker image
         run: |
-          docker compose exec go-dev go mod tidy
           docker build -t wis2box-minio:test -f Dockerfile.local --build-arg RELEASE=local-build-test .
 
       - name: Docker Compose up -d

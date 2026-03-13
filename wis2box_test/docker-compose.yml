@@ -24,7 +24,7 @@ services:
     restart: always
     env_file:
       - test.env
-    command: server --console-address ":9001" /data
+    command: server --console-address ":9001" --sftp="address=:8022" --sftp="ssh-private-key=/home/miniouser/.ssh/id_rsa" /data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
@@ -37,6 +37,8 @@ services:
       - "4001:9001"
       - "4000:9000"
       - "4022:8022"
+    volumes:
+      - ./tests/data/.ssh:/home/miniouser/.ssh:ro
 
   wis2box-management:
     container_name: minio-test-wis2box-management
