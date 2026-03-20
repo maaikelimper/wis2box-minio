@@ -10,11 +10,15 @@ WORKDIR /src
 # Install build dependencies
 RUN apk add -U --no-cache ca-certificates git
 
+# Download static Linux curl binary
+ADD https://github.com/moparisthebest/static-curl/releases/download/v8.17.0/curl-amd64 /usr/bin/curl
+RUN chmod +x /usr/bin/curl
+
 # Copy source code
 COPY . /src
 
-# Build minio binary
-RUN go build -o /go/bin/minio ./
+# Build minio binary with version info
+RUN go build -ldflags "$(go run buildscripts/gen-ldflags.go)" -o /go/bin/minio ./
 
 # Optionally build mc if source is present (remove if not needed)
 # RUN git clone https://github.com/minio/mc.git /src-mc && cd /src-mc && go build -o /go/bin/mc ./
@@ -40,7 +44,9 @@ ENV MINIO_ACCESS_KEY_FILE=access_key \
 
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /go/bin/minio /usr/bin/minio
-# COPY --from=build /go/bin/mc /usr/bin/mc  # Uncomment if you build mc
+# Copy static curl binary from build stage
+COPY --from=build /usr/bin/curl /usr/bin/curl
+#COPY --from=build /go/bin/mc /usr/bin/mc
 COPY CREDITS /licenses/CREDITS
 COPY LICENSE /licenses/LICENSE
 COPY dockerscripts/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh

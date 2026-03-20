@@ -162,31 +162,32 @@ internalAuth:
 	}
 
 	if caPublicKey != nil && pass == nil {
-
 		err := validateKey(c, key)
 		if err != nil {
 			return nil, errAuthentication
 		}
-
 	} else {
-
 		// Temporary credentials are not allowed.
 		if ui.Credentials.IsTemp() {
 			return nil, errAuthentication
 		}
-
 		if subtle.ConstantTimeCompare([]byte(ui.Credentials.SecretKey), pass) != 1 {
 			return nil, errAuthentication
 		}
+
+	}
+
+	copts := map[string]string{
+		"AccessKey": ui.Credentials.AccessKey,
+		"SecretKey": ui.Credentials.SecretKey,
+	}
+	if ui.Credentials.IsTemp() {
+		copts["SessionToken"] = ui.Credentials.SessionToken
 	}
 
 	return &ssh.Permissions{
-		CriticalOptions: map[string]string{
-			"AccessKey":    ui.Credentials.AccessKey,
-			"SecretKey":    ui.Credentials.SecretKey,
-			"SessionToken": ui.Credentials.SessionToken,
-		},
-		Extensions: make(map[string]string),
+		CriticalOptions: copts,
+		Extensions:      make(map[string]string),
 	}, nil
 }
 
@@ -207,9 +208,8 @@ func processLDAPAuthentication(key ssh.PublicKey, pass []byte, user string) (per
 
 			return &ssh.Permissions{
 				CriticalOptions: map[string]string{
-					"AccessKey":    sa.Credentials.AccessKey,
-					"SecretKey":    sa.Credentials.SecretKey,
-					"SessionToken": sa.Credentials.SessionToken,
+					"AccessKey": sa.Credentials.AccessKey,
+					"SecretKey": sa.Credentials.SecretKey,
 				},
 				Extensions: make(map[string]string),
 			}, nil
@@ -346,9 +346,11 @@ type sftpLogger struct{}
 
 func (s *sftpLogger) Info(tag xsftp.LogType, msg string) {
 	logger.Info(msg)
+	//fmt.Printf("[SFTP-INFO] %s: %s\n", tag, msg)
 }
 
 func (s *sftpLogger) Error(tag xsftp.LogType, err error) {
+	fmt.Printf("[SFTP-ERROR] %s: %v\n", tag, err)
 	switch tag {
 	case xsftp.AcceptNetworkError:
 		sftpLogOnceIf(context.Background(), err, "accept-limit-sftp")
@@ -488,9 +490,21 @@ func startSFTPServer(args []string) {
 	sshConfig.AddHostKey(private)
 
 	handleSFTPSession := func(channel ssh.Channel, sconn *ssh.ServerConn) {
-		server := sftp.NewRequestServer(channel, NewSFTPDriver(sconn.Permissions), sftp.WithRSAllocator())
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("[SFTP-PANIC] Recovered: %v\n", r)
+			}
+		}()
+		var remoteIP string
+		if host, _, err := net.SplitHostPort(sconn.RemoteAddr().String()); err == nil {
+			remoteIP = host
+		}
+		// Print to stdout when a new SFTP session is started
+		//fmt.Printf("SFTP session started for user: %s from IP: %s\n", sconn.User(), remoteIP)
+		server := sftp.NewRequestServer(channel, NewSFTPDriver(sconn.Permissions, remoteIP), sftp.WithRSAllocator())
 		defer server.Close()
 		server.Serve()
+		//fmt.Printf("[SFTP] SFTP session handler exited cleanly\n")
 	}
 
 	sftpServer, err := xsftp.NewServer(&xsftp.Options{

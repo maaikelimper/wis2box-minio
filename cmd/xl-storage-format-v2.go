@@ -818,10 +818,10 @@ func decodeXLHeaders(buf []byte) (versions int, headerV, metaV uint8, b []byte, 
 		return 0, 0, 0, buf, err
 	}
 	if hdrVer > xlHeaderVersion {
-		return 0, 0, 0, buf, fmt.Errorf("decodeXLHeaders: Unknown xl header version %d", metaVer)
+		return 0, 0, 0, buf, fmt.Errorf("decodeXLHeaders: Unknown xl header version %d (hdrVer=%d, xlHeaderVersion=%d)", metaVer, hdrVer, xlHeaderVersion)
 	}
 	if metaVer > xlMetaVersion {
-		return 0, 0, 0, buf, fmt.Errorf("decodeXLHeaders: Unknown xl meta version %d", metaVer)
+		return 0, 0, 0, buf, fmt.Errorf("decodeXLHeaders: Unknown xl meta version %d (metaVer=%d, xlMetaVersion=%d)", metaVer, metaVer, xlMetaVersion)
 	}
 	versions, buf, err = msgp.ReadIntBytes(buf)
 	if err != nil {
