@@ -54,18 +54,26 @@ def test_wis2box_data_ingest():
 def test_wis2box_sftp_upload():
 
     # this uses the minio client for python to upload some data to the SFTP server
-    filepath = './tests/data/observations/minio-SFTP_20260203.txt'
-    transport = paramiko.Transport(('localhost', 4022))
-    transport.connect(username='minio', password='minio123')
-    sftp = paramiko.SFTPClient.from_transport(transport)
-    sftp.put(filepath, f'/wis2box-incoming/{METADATA_ID}/minio-SFTP_20260203.txt')
-    sftp.close()
-    transport.close()
-    # wait a bit for the data to be ingested
-    time.sleep(0.5)
+    filenames = [
+        'minio-SFTP_20260203.txt',
+        'minio-SFTP_again_20260203.txt'
+    ]
+    for filename in filenames:
+        filepath = f'./tests/data/observations/{filename}'
+        transport = paramiko.Transport(('localhost', 4022))
+        transport.connect(username='minio', password='minio123')
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        sftp.put(filepath, f'/wis2box-incoming/{METADATA_ID}/{filename}')
+        sftp.close()
+        transport.close()
+        # wait a bit for the data to be ingested
+        time.sleep(0.5)
 
-    # check if the data has been published
-    test_url = f'{MINIO_SERVER_URL}/wis2box-public/2026-02-03/wis/{METADATA_ID}/minio-SFTP_20260203.txt'
-    response = requests.get(test_url)
-    assert response.status_code == 200
-    assert response.text == 'This is just some random data that will be uploaded over SFTP as part of the integration tests for the wis2box-minio project.'
+        # check if the data has been published
+        test_url = f'{MINIO_SERVER_URL}/wis2box-public/2026-02-03/wis/{METADATA_ID}/{filename}'
+        print(test_url)
+        response = requests.get(test_url)
+        print(response)
+        assert response.status_code == 200
+        expected_text = 'This is just some random data that will be uploaded over SFTP as part of the integration tests for the wis2box-minio project.'
+        assert response.text == expected_text
